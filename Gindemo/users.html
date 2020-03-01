@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>User</title>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+  <script src="static/js/vue-2.4.0.js"></script>
+  <script src="static/js/vue-resource-1.3.4.js"></script>
+
+
+  <link rel="stylesheet" href="static/css/amazeui.min.css" />
+  <link rel="stylesheet" href="static/css/admin.css" />
+  <link rel="stylesheet" href="static/css/bootstrap-3.3.7.css">
+
+</head>
+
+<body>
+
+<div id="app">
+
+  <div class="panel panel-info">
+
+    <div class="panel-heading">
+      <h3 class="panel-title">用户管理</h3>
+    </div>
+
+    <div class="panel-body form-inline">
+
+      <label style="margin-left: 20px">
+        证件号:
+        <input type="text" v-model="Id" class="form-control">
+      </label>
+
+      <label style="margin-left: 20px">
+        姓名:
+        <input type="text" v-model="Name" class="form-control">
+      </label>
+
+      <input  style="margin-left: 5px"  type="button" value="添加" @click="add" class="btn btn-primary">
+
+      <label style="margin-left: 190px">
+        搜索(证件号或姓名）：
+
+        <input type="text" class="form-control" v-model="keywords" id="search" v-color="'blue'">
+      </label>
+
+    </div>
+  </div>
+
+  <table class="table table-bordered table-hover table-striped">
+    <thead>
+    <tr>
+      <th>证件号</th>
+      <th>姓名</th>
+      <th>操作</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    <tr v-for="item in searchData" :key="item.Id">
+      <td>{{item.Id}}</td>
+      <td>{{item.Name}}</td>
+      <td>
+        <a href="" @click.prevent="del(item.Id)">删除</a>
+      </td>
+    </tr>
+    </tbody>
+
+  </table>
+  <div class="am-cf" >
+    <h5>  共{{all}}条记录,共{{totalPage}}页 第{{currentPage}}页</h5>
+    <div class="am-fr">
+
+      <ul class="am-pagination">
+        <li>
+          <a @click="firstPage()">首页</a>
+        </li>
+        <li>
+          <a @click="prePage()">上一页</a>
+        </li>
+        <li>
+          <a @click="nextPage()">下一页</a>
+        </li>
+        <li>
+          <a @click="lastPage()">尾页</a>
+        </li>
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  //服务器根路径
+  Vue.http.options.root = 'http://127.0.0.1:9090/';
+
+  Vue.http.options.emulateJSON = true;
+
+  //自定义指令
+  Vue.directive('color', {
+    bind: function (el, binding) {
+      el.style.color = binding.value
+    }
+  });
+
+  var vm = new Vue({
+    el: '#app',
+
+    data: {
+      Name: '',//姓名
+      Id:'',//Id
+      keywords:'',//查询关键字
+      list: [],//总的信息
+      all:0,//展示的信息数目
+      totalPage:0,//总页数
+      currentPage:1,//当前页数
+      pageSize:10,//页的大小
+      data:[]//临时存放搜素的数据
+    },
+
+    computed:{
+      //查询
+      searchData:function () {
+        var search=this.keywords;
+        if(search!=null){
+          this.data= this.list.filter(item => {
+            if (item.Name.includes(search)||item.Id.includes(search)) {
+              return item
+            }
+          })
+          this.all=this.data.length;
+          this.totalPage=Math.ceil(this.all/this.pageSize);
+          let begin=(this.currentPage-1)*this.pageSize;
+          let end=this.currentPage*this.pageSize;
+          return this.data.slice(begin,end);
+        }else{
+          return this.list
+        }
+      },
+    },
+
+    created() {
+      this.getAllList();
+    },
+
+    methods: {
+
+      // 获取所有的用户列表
+      getAllList() {
+        this.$http.get('api/getuser').then(result => {
+          var result = result.body
+          this.list = result
+        })
+      },
+
+      //第一页
+      firstPage(){
+        this.currentPage=1;
+      },
+
+      //最后一页
+      lastPage(){
+        this.currentPage=this.totalPage;
+      },
+
+      //上一页
+      prePage(){
+        if(this.currentPage==1){
+          return false;
+        }else{
+          this.currentPage--;
+
+        }
+      },
+
+      //下一页
+      nextPage(){
+         if(this.currentPage==this.totalPage){
+           return false;
+         }else{
+           this.currentPage++;
+         }
+
+      },
+
+      //添加用户
+      add() {
+        this.$http.post('api/adduser', { Id:this.Id,Name: this.Name }).then(result => {
+            this.getAllList()
+            this.Name = ''
+            this.Id=''
+        })
+      },
+
+      //删除用户
+      del(id) {
+        this.$http.post('api/deluser',{Id:id}).then(result => {
+            this.getAllList()
+        })
+      },
+    }
+  });
+
+</script>
+</body>
+</html>
+
